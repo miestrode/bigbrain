@@ -1,6 +1,6 @@
 # `bigbrain` logic circuit optimizer
 
-Given a set of logic functions, in the form of tables, `bigbrain` is a program for creating an optimized circuit fitting the tables. It requires the [CBC Linear Programming solver](https://github.com/coin-or/Cbc?tab=readme-ov-file#binaries).
+Given a set of logic functions, in the form of tables, `bigbrain` is a program for creating an optimized circuit fitting the tables. It requires the [CBC solver](https://github.com/coin-or/Cbc?tab=readme-ov-file#binaries).
 
 ## How does it work?
 
