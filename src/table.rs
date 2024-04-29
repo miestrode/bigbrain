@@ -1,8 +1,12 @@
 use std::{
-    collections::{BinaryHeap, HashSet},
+    collections::HashSet,
     fmt::{self, Display, Write},
     hash::Hash,
+    iter::Sum,
+    time::Instant,
 };
+
+use good_lp::{coin_cbc, variable, Expression, ProblemVariables, Solution, SolverModel};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Output {
@@ -56,7 +60,7 @@ impl<const N: usize> Implicant<N> {
         self.constituents.len()
     }
 
-    fn from_table_idx(idx: usize) -> Self {
+    fn from_table_idx(idx: usize, is_minterm: bool) -> Self {
         Self {
             values: (0..N)
                 .map(|var| {
@@ -69,7 +73,11 @@ impl<const N: usize> Implicant<N> {
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
-            constituents: HashSet::from([idx]),
+            constituents: if is_minterm {
+                HashSet::from([idx])
+            } else {
+                HashSet::new()
+            },
         }
     }
 
@@ -123,23 +131,24 @@ where
 {
     const ENTRIES: usize = 1 << N;
 
-    pub fn minterms(&self) -> usize {
+    pub fn minterms(&self) -> HashSet<usize> {
         self.outputs
             .iter()
-            .map(|output| if matches!(output, Output::One) { 1 } else { 0 })
-            .sum()
+            .enumerate()
+            .filter_map(|(idx, output)| matches!(output, Output::One).then_some(idx))
+            .collect()
     }
 
     pub fn is_minterm(&self, idx: usize) -> bool {
         matches!(self.outputs[idx], Output::One)
     }
 
-    pub fn prime_implicants(&self) -> HashSet<Implicant<N>> {
+    pub fn prime_implicants(&self) -> Vec<Implicant<N>> {
         let mut implicants = (0..Self::ENTRIES)
             .filter(|&idx| !matches!(self.outputs[idx], Output::Zero))
-            .map(Implicant::from_table_idx)
+            .map(|idx| Implicant::from_table_idx(idx, matches!(self.outputs[idx], Output::One)))
             .collect::<Vec<_>>();
-        let mut prime_implicants = HashSet::new();
+        let mut prime_implicants = Vec::new();
 
         loop {
             let mut merged = vec![false; implicants.len()];
@@ -160,7 +169,7 @@ where
                 }
 
                 if !merged[first_idx] {
-                    prime_implicants.insert(first.clone());
+                    prime_implicants.push(first.clone());
                 }
             }
 
@@ -175,34 +184,49 @@ where
     }
 
     pub fn minimize(&self) -> Vec<Implicant<N>> {
-        let mut covering = self.prime_implicants();
-        let mut covered_minterms = HashSet::<usize>::with_capacity(self.minterms());
-        let mut implicants = Vec::new();
+        fn cover<T: Eq + Hash>(universe: &HashSet<T>, sets: &[&HashSet<T>]) -> Vec<usize> {
+            let mut problem = ProblemVariables::new();
 
-        while covered_minterms.len() < self.minterms() {
-            let implicant = covering
+            let include_vars = problem.add_vector(variable().min(0).max(1).integer(), sets.len());
+
+            let mut model = problem
+                .minimise(Expression::sum(include_vars.iter()))
+                .using(coin_cbc);
+
+            model.set_parameter("loglevel", "0");
+
+            for item in universe {
+                model = model.with(
+                    Expression::sum(sets.iter().zip(&include_vars).filter_map(
+                        |(set, include_var)| set.contains(item).then_some(include_var),
+                    ))
+                    .geq(1),
+                );
+            }
+
+            let solution = model.solve().unwrap();
+
+            include_vars
                 .iter()
-                .max_by_key(|prime| {
-                    prime
-                        .constituents
-                        .difference(&covered_minterms)
-                        .filter(|&&constituent| self.is_minterm(constituent))
-                        .count()
+                .enumerate()
+                .filter_map(|(idx, include_var)| {
+                    (solution.value(*include_var) > 0.0).then_some(idx)
                 })
-                .unwrap()
-                .clone();
-            covering.remove(&implicant);
-
-            covered_minterms.extend(
-                implicant
-                    .constituents
-                    .iter()
-                    .filter(|&&constituent| self.is_minterm(constituent)),
-            );
-
-            implicants.push(implicant);
+                .collect()
         }
 
-        implicants
+        let mut primes = self.prime_implicants();
+
+        let sets = primes
+            .iter()
+            .map(|prime| &prime.constituents)
+            .collect::<Vec<_>>();
+        let universe = self.minterms();
+
+        cover(&universe, &sets)
+            .iter()
+            .rev()
+            .map(|&idx| primes.remove(idx))
+            .collect()
     }
 }

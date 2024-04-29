@@ -1,28 +1,28 @@
+use std::time::Instant;
+
 use bigbrain::table::{Output, Table};
 
 fn main() {
-    let a_segment: Table<4> = Table {
+    let table: Table<3> = Table {
         outputs: [
             Output::One,
-            Output::Zero,
             Output::One,
             Output::One,
             Output::Zero,
+            Output::Zero,
             Output::One,
             Output::One,
             Output::One,
-            Output::One,
-            Output::One,
-            Output::DontCare,
-            Output::DontCare,
-            Output::DontCare,
-            Output::DontCare,
-            Output::DontCare,
-            Output::DontCare,
         ],
     };
 
-    for implicant in a_segment.minimize() {
+    let instant = Instant::now();
+
+    let implicants = table.minimize();
+
+    println!("took: {}us", instant.elapsed().as_micros());
+
+    for implicant in implicants {
         println!("{implicant}");
     }
 }
