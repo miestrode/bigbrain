@@ -1,11 +1,11 @@
 # `bigbrain` logic circuit optimizer
 
-Given a set of logic functions, in the form of tables, `bigbrain` is a program for creating an optimized circuit fitting the tables. It requires the [CBC solver](https://github.com/coin-or/Cbc?tab=readme-ov-file#binaries).
+Given a set of logic functions, in the form of tables, `bigbrain` is a program for creating an optimized circuit fitting the tables. It uses HiGHS for ILP, and so requires having a C++ compiler and `cmake`, to build it.
 
 ## How does it work?
 
 - Find prime implicants for each table using the Quine-McCluskey algorithm
-- Find a covering of the minterms using ILP (Currently using the CBC solver)
+- Find a covering of the minterms using ILP (Currently using the HiGHS solver)
 - Add each covering to an e-graph
 - Perform equality saturation using a set of rewrite rules (using `egg`)
 - Extract each function output from the e-graph. Different metrics may be used:

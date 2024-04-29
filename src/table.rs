@@ -3,10 +3,9 @@ use std::{
     fmt::{self, Display, Write},
     hash::Hash,
     iter::Sum,
-    time::Instant,
 };
 
-use good_lp::{coin_cbc, variable, Expression, ProblemVariables, Solution, SolverModel};
+use good_lp::{highs, variable, Expression, ProblemVariables, Solution, SolverModel};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Output {
@@ -191,9 +190,7 @@ where
 
             let mut model = problem
                 .minimise(Expression::sum(include_vars.iter()))
-                .using(coin_cbc);
-
-            model.set_parameter("loglevel", "0");
+                .using(highs);
 
             for item in universe {
                 model = model.with(

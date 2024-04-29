@@ -6,5 +6,4 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-egg = "0.9.5"
-good_lp = "1.8.1"
+good_lp = { version = "1.8.1", features = ["highs"], default-features = false }
