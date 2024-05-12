@@ -4,10 +4,12 @@ Given a set of logic functions, in the form of tables, `bigbrain` is a program f
 
 ## How does it work?
 
+Here's a rough views of the steps involved.
+
 - Find prime implicants for each table using the Quine-McCluskey algorithm
 - Find a covering of the minterms using ILP (Currently using the HiGHS solver)
-- Add each covering to an e-graph
-- Perform equality saturation using a set of rewrite rules (using `egg`)
+- Add each covering to an e-graph engine
+- Perform equality saturation using a set of rewrite rules (using `ekege`)
 - Extract each function output from the e-graph. Different metrics may be used:
   - Latency (maximum depth)
   - Total number of gates
